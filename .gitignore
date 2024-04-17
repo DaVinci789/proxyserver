@@ -1,0 +1,7 @@
+*.o
+*.tar
+*.gzip
+*.bzip
+*.gz
+proxy
+core
