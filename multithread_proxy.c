@@ -32,6 +32,10 @@ char *send_request(int port_number, char *host, char *message, int message_strle
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   server = gethostbyname(host);
+  if (!server) {
+    *response_out_len = 0;
+    return NULL;
+  }
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port_number);
   memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
@@ -127,9 +131,21 @@ void handle_request(int connection_fd)
 
   int response_len = 0;
   char *response = send_request(80, host, message, strlen(message), &response_len);
+  if (!response) return;
+
   Write(connection_fd, response, response_len);
   free(response);
   response = NULL;
+}
+
+void *handle_client(void *vargp)
+{
+  int connection_fd = *(int*) vargp;
+  free((int*) vargp);
+
+  handle_request(connection_fd);
+  Close(connection_fd);
+  return NULL;
 }
 
 int main(int argc, char **argv)
@@ -145,8 +161,14 @@ int main(int argc, char **argv)
   while (1) {
     struct sockaddr_storage clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
-    int connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
-    handle_request(connection_fd);
-    Close(connection_fd);
+    int *connection_fd = malloc(sizeof(*connection_fd));
+    *connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
+    printf("Accepted new connection!\n");
+    pthread_t thread_id = {0};
+    pthread_create(&thread_id, NULL, &handle_client, (void *) connection_fd);
+    pthread_detach(thread_id);
   }
+
+  close(listen_fd);
+  return 0;
 }
