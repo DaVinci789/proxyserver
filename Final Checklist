@@ -1,0 +1,39 @@
+# Proxy Lab Checklist
+
+## General
+[ ] Accept requests
+[ ] Log each request to a file
+[ ] Return result to browser
+
+## Hand in
+[ ] Extraneous Print Statements removed
+[ ] DEBUG off (?)
+[ ] Team member names in proxy.c
+[ ] Zip file created.
+
+## Uncategorized
+[ ] HTTP/1.0 GET requests
+[ ] Host header sent
+[ ] Host header of browser sent
+[ ] User-Agent header sent
+[ ] Connection header sent
+[ ] Proxy-Connection header sent
+[ ] Additional Browser headers sent unchanged
+[ ] All request forwarded as HTTP/1.0
+[ ] EOF sent to server connection when response finishes.
+[ ] Port parsed out from URL
+[ ] Port 80 used by default if not stated
+[ ] Logging in the format of [Date] browserIP URL size
+[ ] Bad website filtering/blocklist
+[ ] Robust against malformed addresses
+[ ] Robust against malicious input
+[ ] Errors handled gracefully. Ideally proxy doesn't terminate
+[ ] No segfaults, memory leaks, or unclosed file descriptors on terminate.
+[ ] Lowercase rio_* routines used (don't terminate proxy)
+[ ] SIGPIPE ignored
+[ ] On Premature connection termination: Close Socket. Print error message, continue
+[ ] errno = ECONNRESET handled
+[ ] if HTTP request fails, thread closes all open socket descriptors and frees memory resources
+[ ] Replace any Connection/Proxy-Connection: [connection-token] headers with Connection/Proxy-Connection: close
+[ ] Remove Keep-Alive headers
+[ ] Handle binary data
