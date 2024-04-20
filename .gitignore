@@ -5,3 +5,5 @@
 *.gz
 proxy
 core
+tiny/tiny
+tiny/cgi-bin
