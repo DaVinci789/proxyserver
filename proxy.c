@@ -1,4 +1,5 @@
 #include "csapp.h"
+#include "uriparse.h" // Ask carl if external libraries are allowed.
 
 void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
@@ -29,16 +30,21 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   int sent = 0;
   int received = 0;
   long total = 0;
+  *response_out_len = 0;
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   server = gethostbyname(host);
+  if (!server) {
+    *response_out_len = 0;
+    return NULL;
+  }
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port_number);
   memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
   if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-    fprintf(stderr, "ERROR connecting");
-    exit(1);
+    fprintf(stderr, "ERROR connecting\n");
+    return NULL;
   }
 
   total = message_strlen;
@@ -46,8 +52,9 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   do {
     bytes = write(sockfd, message + sent, total - sent);
     if (bytes < 0) {
-      fprintf(stderr, "ERROR writing message to socket");
-      exit(1);
+      fprintf(stderr, "ERROR writing message to socket\n");
+      return NULL;
+      //exit(1);
     }
     if (bytes == 0) {
       break;
@@ -69,28 +76,31 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   do {
     bytes = read(sockfd, response + received, total - received);
     if (bytes < 0) {
-      fprintf(stderr, "ERROR reading response from socket");
-      exit(1);
+      fprintf(stderr, "ERROR reading response from socket\n");
+      return NULL;
+      //exit(1);
     }
 
     received += bytes;
 
-    char *content_length_location = memmem(response, received, "Content-Length: ", sizeof("Content-Length: ") - 1);
-    if (resized_buffer == 0 &&
-	content_length_location != NULL) {
-      resized_buffer = 1;
+    if (resized_buffer == 0) {
+      char *content_length_location = memmem(response, received,
+                                             "Content-Length: ", sizeof("Content-Length: ") - 1);
+      if (content_length_location != NULL) {
+        resized_buffer = 1;
 
-      char content_length_str[MAXLINE] = {0};
-      sscanf(content_length_location, "Content-Length: %99[^\r]\r\n", content_length_str);
-      int content_length = atoi(content_length_str);
+        char content_length_str[MAXLINE] = {0};
+        sscanf(content_length_location, "Content-Length: %99[^\r]\r\n", content_length_str);
+        int content_length = atoi(content_length_str);
 
-      if (content_length > total) {
-	printf("Allocate!\n");
-	total += content_length;
-	response = realloc(response, total);
+        if (content_length > total) {
+          printf("Allocate!\n");
+          total += content_length;
+          response = realloc(response, total);
+        }
       }
     }
-  } while (bytes != 0);//while (received < total);
+  } while (bytes != 0);
 
   close(sockfd);
   *response_out_len = received;
@@ -113,10 +123,17 @@ void handle_request(int connection_fd)
   // read the http request
   sscanf(buf, "%s %s %s", method, uri, version);
 
-  char host[MAXLINE] = {0}; 
+  /*char host[MAXLINE] = {0}; 
   char page[MAXLINE] = {0};
-  sscanf(uri, "http://%99[^/]/%99[^\n]", host, page);
-  printf("%s %s\n", host, page);
+  sscanf(uri, "http://%99[^/]/%99[^\n]", host, page);*/
+
+  struct uri uri_parse = {0};
+  uriparse(uri, &uri_parse);
+  char *host = uri_parse.host;
+  char *page = uri_parse.path;
+  char *port_string = uri_parse.port;
+
+  printf("URI: %s Host: %s Page: %s Port: %s\n", uri, host, page, port_string);
 
   // big number here cause gcc tells me that host (of size MAXLINE) could be
   // too chonky for a `message` var of size MAXLINE.
@@ -125,8 +142,12 @@ void handle_request(int connection_fd)
                              // IDK if doing MAXLINE * 2 makes this a VLA.
   sprintf(message, "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", page, host);
 
+  int port = 80;
+  if (port_string)
+    port = atoi(port_string);
+
   int response_len = 0;
-  char *response = send_request(80, host, message, strlen(message), &response_len);
+  char *response = send_request(port, host, message, strlen(message), &response_len);
   Write(connection_fd, response, response_len);
   free(response);
   response = NULL;
@@ -149,4 +170,7 @@ int main(int argc, char **argv)
     handle_request(connection_fd);
     Close(connection_fd);
   }
+
+  close(listen_fd);
+  return 0;
 }
