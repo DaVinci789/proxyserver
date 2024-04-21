@@ -9,6 +9,7 @@
 [ ] Extraneous Print Statements removed
 [ ] DEBUG off (?)
 [ ] Team member names in proxy.c
+[ ] Disable sanitizers in Makefile
 [ ] Zip file created.
 
 ## Uncategorized
