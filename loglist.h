@@ -90,7 +90,7 @@ int get_messages(struct LogListVisitor *visitor, int *len, char **message)
     visitor->current_list = visitor->current_list->next;
     *len = 0;
     *message = visitor->current_list->head.info;
-    return 1;
+    return visitor->current_list != NULL;
   }
 
   pthread_mutex_lock(&visitor->current_list->lock);

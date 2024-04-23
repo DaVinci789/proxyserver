@@ -1,6 +1,19 @@
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
 
+#define LOGLIST_IMPLEMENTATION
+#include "loglist.h"
+
+typedef struct thread_data {
+  int connection_fd;
+  struct LogList *logger;
+} thread_data;
+
+typedef struct log_thread_data {
+  FILE *log_file_fd;
+  struct LogList *head;
+} log_thread_data;
+
 void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
   char *bf = haystack;
@@ -107,7 +120,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   return response;
 }
 
-void handle_request(int connection_fd)
+void handle_request(int connection_fd, struct LogList *logger)
 {
   rio_t rio = {0};
   char buf[MAXLINE] = {0};
@@ -123,17 +136,15 @@ void handle_request(int connection_fd)
   // read the http request
   sscanf(buf, "%s %s %s", method, uri, version);
 
-  /*char host[MAXLINE] = {0}; 
-  char page[MAXLINE] = {0};
-  sscanf(uri, "http://%99[^/]/%99[^\n]", host, page);*/
-
   struct uri uri_parse = {0};
   uriparse(uri, &uri_parse);
   char *host = uri_parse.host;
   char *page = uri_parse.path;
   char *port_string = uri_parse.port;
 
-  printf("URI: %s Host: %s Page: %s Port: %s\n", uri, host, page, port_string);
+  char logged_message[32768] = {0};
+  int log_len = sprintf(logged_message, "URI: %s Host: %s Page: %s Port: %s\n", uri, host, page, port_string);
+  log_message(logger, logged_message, log_len);
 
   // big number here cause gcc tells me that host (of size MAXLINE) could be
   // too chonky for a `message` var of size MAXLINE.
@@ -155,12 +166,35 @@ void handle_request(int connection_fd)
 
 void *handle_client(void *vargp)
 {
-  int connection_fd = *(int*) vargp;
-  free((int*) vargp);
-
-  handle_request(connection_fd);
-  Close(connection_fd);
+  thread_data *thread_data = vargp;
+  handle_request(thread_data->connection_fd, thread_data->logger);
+  Close(thread_data->connection_fd);
+  free(vargp);
   return NULL;
+}
+
+void *logging(void *vargp)
+{
+  log_thread_data *data = (log_thread_data *) vargp;
+  struct LogList *head = data->head;
+  while (1) {
+    struct LogListVisitor visitor = {0};
+    visitor.current_list = head;
+    int len = 0;
+    char *message = NULL;
+    int dirty = 0;
+    while (get_messages(&visitor, &len, &message)) {
+      if (len == 0) continue; // @Hack @ThisIsALaterProblemDontFixThisForThisProjectButInTheFuture
+                              // The reason for this check is because a single iteration of advancing
+                              // the visitor to the next node is done every loop.
+                              // That is, all log message nodes may not have text, but we still need
+                              // run the while loop to figure that out.
+      dirty = 1;
+      printf("%.*s", len, message);
+      fprintf(data->log_file_fd, "%.*s", len, message);
+    }
+    if (dirty) fflush(data->log_file_fd);
+  }
 }
 
 int main(int argc, char **argv)
@@ -169,21 +203,41 @@ int main(int argc, char **argv)
     fprintf(stderr, "usage: %s <port>\n", argv[0]);
     exit(1);
   }
+
   int listen_fd  = Open_listenfd(argv[1]);
 
-  // pthread_create(logging thread);
+  log_thread_data *log_thread_data = malloc(sizeof(*log_thread_data));
+
+  FILE *logfile = fopen("threadlog.log", "w");
+  struct LogList *head = init_loglist();
+  struct LogList **tail = &head->next;
+
+  log_thread_data->log_file_fd = logfile;
+  log_thread_data->head = head;
+
+  pthread_t logging_id = {0};
+  pthread_create(&logging_id, NULL, &logging, (void *) log_thread_data);
+  pthread_detach(logging_id);
 
   while (1) {
     struct sockaddr_storage clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
-    int *connection_fd = malloc(sizeof(*connection_fd));
-    *connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
-    printf("Accepted new connection!\n");
+    thread_data *thread_data = malloc(sizeof(*thread_data));
+    thread_data->connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
+
+    log_message(head, "Accepted new connection!\n", sizeof("Accepted new connection!\n"));
+
+    *tail = init_loglist();
+    thread_data->logger = *tail;
+    tail = &((*tail)->next); // @Style. Don't do this.
+
     pthread_t thread_id = {0};
-    pthread_create(&thread_id, NULL, &handle_client, (void *) connection_fd);
+    pthread_create(&thread_id, NULL, &handle_client, (void *) thread_data);
     pthread_detach(thread_id);
   }
 
   close(listen_fd);
+  fclose(log_thread_data->log_file_fd);
+  destroy_loglist(head);
   return 0;
 }

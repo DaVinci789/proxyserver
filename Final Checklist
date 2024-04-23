@@ -14,10 +14,10 @@
 
 ## Uncategorized
 [ ] HTTP/1.0 GET requests
-[ ] Host header sent
-[ ] Host header of browser sent
-[ ] User-Agent header sent
-[ ] Connection header sent
+[ ] [UTSAV] Host header sent
+[ ] [UTSAV] Host header of browser sent
+[ ] [UTSAV] User-Agent header sent
+[ ] [UTSAV] Connection header sent
 [ ] Proxy-Connection header sent
 [ ] Additional Browser headers sent unchanged
 [ ] All request forwarded as HTTP/1.0
@@ -38,3 +38,4 @@
 [ ] Replace any Connection/Proxy-Connection: [connection-token] headers with Connection/Proxy-Connection: close
 [ ] Remove Keep-Alive headers
 [ ] Handle binary data
+[ ] Reduce redundancy in proxy.c and multithreaded_proxy.c
