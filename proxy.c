@@ -2,19 +2,9 @@
 #include "uriparse.h" // Ask carl if external libraries are allowed.
 
 #define LOGLIST_SEQUENTIAL
-#define LOGLIST_IMPLEMENTATION
 FILE *LOGLIST_SEQUENTIAL_FD = NULL;
+#define LOGLIST_IMPLEMENTATION
 #include "loglist.h"
-
-typedef struct thread_data {
-  int connection_fd;
-  struct LogList *logger;
-} thread_data;
-
-typedef struct log_thread_data {
-  FILE *log_file_fd;
-  struct LogList *head;
-} log_thread_data;
 
 void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
