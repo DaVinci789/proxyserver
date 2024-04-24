@@ -237,7 +237,7 @@ int main(int argc, char **argv)
   }
 
   close(listen_fd);
-  fclose(log_thread_data->log_file_fd);
+  fclose(logfile);
   destroy_loglist(head);
   return 0;
 }

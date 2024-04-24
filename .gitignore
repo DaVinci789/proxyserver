@@ -8,3 +8,4 @@ multithread_proxy
 core
 tiny/tiny
 tiny/cgi-bin
+*.log

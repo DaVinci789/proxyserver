@@ -34,6 +34,12 @@ void destroy_loglist(struct LogList *head);
 
 void log_message(struct LogList *logger, char *message, int message_len)
 {
+#ifdef LOGLIST_SEQUENTIAL
+  #include <stdio.h>
+  printf("%.*s", message_len, message);
+  fprintf(LOGLIST_SEQUENTIAL_FD, "%.*s", message_len, message);
+  return;
+#endif
   pthread_mutex_lock(&logger->lock);
   for (int i = 0; i < message_len; i++) {
     if (logger->tail->used == LOGLIST_MAXBUF) {

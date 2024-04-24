@@ -1,6 +1,21 @@
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
 
+#define LOGLIST_SEQUENTIAL
+#define LOGLIST_IMPLEMENTATION
+FILE *LOGLIST_SEQUENTIAL_FD = NULL;
+#include "loglist.h"
+
+typedef struct thread_data {
+  int connection_fd;
+  struct LogList *logger;
+} thread_data;
+
+typedef struct log_thread_data {
+  FILE *log_file_fd;
+  struct LogList *head;
+} log_thread_data;
+
 void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
   char *bf = haystack;
@@ -107,7 +122,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   return response;
 }
 
-void handle_request(int connection_fd)
+void handle_request(int connection_fd, struct LogList *logger)
 {
   rio_t rio = {0};
   char buf[MAXLINE] = {0};
@@ -123,17 +138,15 @@ void handle_request(int connection_fd)
   // read the http request
   sscanf(buf, "%s %s %s", method, uri, version);
 
-  /*char host[MAXLINE] = {0}; 
-  char page[MAXLINE] = {0};
-  sscanf(uri, "http://%99[^/]/%99[^\n]", host, page);*/
-
   struct uri uri_parse = {0};
   uriparse(uri, &uri_parse);
   char *host = uri_parse.host;
   char *page = uri_parse.path;
   char *port_string = uri_parse.port;
 
-  printf("URI: %s Host: %s Page: %s Port: %s\n", uri, host, page, port_string);
+  char logged_message[32768] = {0};
+  int log_len = sprintf(logged_message, "URI: %s Host: %s Page: %s Port: %s\n", uri, host, page, port_string);
+  log_message(logger, logged_message, log_len);
 
   // big number here cause gcc tells me that host (of size MAXLINE) could be
   // too chonky for a `message` var of size MAXLINE.
@@ -162,16 +175,21 @@ int main(int argc, char **argv)
 
   int listen_fd  = Open_listenfd(argv[1]);
 
-  // pthread_create(logging thread);
+  FILE *logfile = fopen("threadlog.log", "w");
+  LOGLIST_SEQUENTIAL_FD = logfile;
+  struct LogList *head = init_loglist();
+
 
   while (1) {
     struct sockaddr_storage clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
     int connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
-    handle_request(connection_fd);
+    log_message(head, "Accepted new connection!\n", sizeof("Accepted new connection!\n"));
+    handle_request(connection_fd, head);
     Close(connection_fd);
   }
 
   close(listen_fd);
+  fclose(logfile);
   return 0;
 }
