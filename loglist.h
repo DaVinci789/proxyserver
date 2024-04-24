@@ -1,3 +1,5 @@
+#ifndef LOGLIST_H
+#define LOGLIST_H
 #include <pthread.h>
 
 #ifndef LOGLIST_MAXBUF
@@ -28,6 +30,7 @@ struct LogList* init_loglist();
 void init_loglist2(struct LogList *init);
 int get_messages(struct LogListVisitor *visitor, int *len, char **message);
 void destroy_loglist(struct LogList *head);
+#endif
 
 #ifdef LOGLIST_IMPLEMENTATION
 #include <stdlib.h>
