@@ -289,7 +289,7 @@ wait_for_port_use "${tiny_port}"
 # Run the proxy
 proxy_port=$(free_port)
 echo "Starting proxy on port ${proxy_port}"
-./proxy ${proxy_port} &> /dev/null &
+./multithread_proxy ${proxy_port} &> /dev/null &
 proxy_pid=$!
 
 # Wait for the proxy to start in earnest
@@ -338,6 +338,7 @@ kill $nop_pid 2> /dev/null
 wait $nop_pid 2> /dev/null
 
 echo "concurrencyScore: $concurrencyScore/${MAX_CONCURRENCY}"
+exit
 
 #####
 # Caching

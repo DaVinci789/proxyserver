@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
   int listen_fd  = Open_listenfd(argv[1]);
 
-  FILE *logfile = fopen("threadlog.log", "w");
+  FILE *logfile = fopen("proxy.log", "w");
   LOGLIST_SEQUENTIAL_FD = logfile;
   struct LogList *head = init_loglist();
 
@@ -31,6 +31,6 @@ int main(int argc, char **argv)
   }
 
   close(listen_fd);
-  fclose(logfile);
+  fclose(LOGLIST_SEQUENTIAL_FD);
   return 0;
 }

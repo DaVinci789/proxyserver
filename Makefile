@@ -4,8 +4,15 @@
 # rule). You instructor will type "make" on your specific Makefile to
 # build your proxy from sources.
 
+RELEASE := 0
+
 CC = gcc
 CFLAGS = -g -Wall -Wextra -pedantic -fsanitize=address -fsanitize=undefined #-fsanitize=thread
+
+ifeq ($(RELEASE), 1)
+	CFLAGS = -Wall -Wextra -pedantic
+endif
+
 LDFLAGS = -lpthread 
 
 all: proxy multithread_proxy

@@ -1,6 +1,7 @@
 #include "requests.h"
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
+#include <string.h>
 
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
@@ -11,9 +12,9 @@ static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t nee
   while (needlelen <= (haystacklen - (p - bf))) {
     if (NULL != (p = memchr(p, (int)(*pt), haystacklen - (p - bf)))) {
       if (0 == memcmp(p, needle, needlelen)) {
-	return p;
+        return p;
       } else {
-	p += 1;
+        p += 1;
       }
     } else {
       break;
@@ -21,6 +22,26 @@ static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t nee
   }
  
   return NULL;
+}
+
+// ci stands for case insensitive
+static void *memmem_ci(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
+{
+  char *haystack_lower = malloc(haystacklen);
+  char *needle_lower = malloc(needlelen);
+
+  size_t haystacklen_copy = haystacklen;
+  while (haystacklen_copy) {
+    haystack_lower[haystacklen_copy - 1] = tolower(((char*)haystack)[haystacklen_copy - 1]);
+    haystacklen_copy -= 1;
+  }
+  size_t needlelen_copy = needlelen;
+  while (needlelen_copy) {
+    needle_lower[needlelen_copy - 1] = tolower(((char*)needle)[needlelen_copy - 1]);
+    needlelen_copy -= 1;
+  }
+
+  return memmem(haystack_lower, haystacklen, needle_lower, needlelen);
 }
 
 char *send_request(int port_number, char *host, char *message, int message_strlen, int *response_out_len)
@@ -86,14 +107,15 @@ char *send_request(int port_number, char *host, char *message, int message_strle
     received += bytes;
 
     if (resized_buffer == 0) {
-      char *content_length_location = memmem(response, received,
+      char *content_length_location = memmem_ci(response, received,
                                              "Content-Length: ", sizeof("Content-Length: ") - 1);
       if (content_length_location != NULL) {
         resized_buffer = 1;
 
         char content_length_str[MAXLINE] = {0};
-        sscanf(content_length_location, "Content-Length: %99[^\r]\r\n", content_length_str);
+        sscanf(content_length_location, "%*[Cc]ontent-%*[Ll]ength: %99[^\r]\r\n", content_length_str);
         int content_length = atoi(content_length_str);
+        printf("%d\n", content_length);
 
         if (content_length > total) {
           printf("Allocate!\n");
@@ -129,6 +151,7 @@ void handle_request(int connection_fd, struct LogList *logger)
   uriparse(uri, &uri_parse);
   char *host = uri_parse.host;
   char *page = uri_parse.path;
+  page += 1;
   char *port_string = uri_parse.port;
 
   char logged_message[32768] = {0};

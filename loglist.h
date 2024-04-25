@@ -41,6 +41,7 @@ void log_message(struct LogList *logger, char *message, int message_len)
   #include <stdio.h>
   printf("%.*s", message_len, message);
   fprintf(LOGLIST_SEQUENTIAL_FD, "%.*s", message_len, message);
+  fflush(LOGLIST_SEQUENTIAL_FD);
   return;
 #endif
   pthread_mutex_lock(&logger->lock);
@@ -96,9 +97,9 @@ int get_messages(struct LogListVisitor *visitor, int *len, char **message)
   }
 
   if (!visitor->current_list->dirty) {
-    visitor->current_list = visitor->current_list->next;
     *len = 0;
     *message = visitor->current_list->head.info;
+    visitor->current_list = visitor->current_list->next;
     return visitor->current_list != NULL;
   }
 

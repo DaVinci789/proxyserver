@@ -59,7 +59,7 @@ int main(int argc, char **argv)
 
   log_thread_data *log_thread_data = malloc(sizeof(*log_thread_data));
 
-  FILE *logfile = fopen("threadlog.log", "w");
+  FILE *logfile = fopen("proxy.log", "w");
   struct LogList *head = init_loglist();
   struct LogList **tail = &head->next;
 
