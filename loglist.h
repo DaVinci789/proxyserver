@@ -7,7 +7,7 @@
 #endif
 
 struct LogNode {
-  int used;
+  int used_chars;
   char info[LOGLIST_MAXBUF];
   struct LogNode *next;
 };
@@ -15,7 +15,7 @@ struct LogNode {
 struct LogList {
   pthread_mutex_t lock;
   struct LogList *next;
-  int dirty;
+  int dirty; // Indicates a message has been written to this LogList
   struct LogNode head;
   struct LogNode *tail;
 };
@@ -46,14 +46,14 @@ void log_message(struct LogList *logger, char *message, int message_len)
 #endif
   pthread_mutex_lock(&logger->lock);
   for (int i = 0; i < message_len; i++) {
-    if (logger->tail->used == LOGLIST_MAXBUF) {
+    if (logger->tail->used_chars == LOGLIST_MAXBUF) {
       if (logger->tail->next == NULL) {
         logger->tail->next = calloc(sizeof(*logger->tail), 1);
       }
       logger->tail = logger->tail->next;
     }
-    logger->tail->info[logger->tail->used] = message[i];
-    logger->tail->used += 1;
+    logger->tail->info[logger->tail->used_chars] = message[i];
+    logger->tail->used_chars += 1;
   }
   logger->dirty = 1;
   pthread_mutex_unlock(&logger->lock);
@@ -109,7 +109,7 @@ int get_messages(struct LogListVisitor *visitor, int *len, char **message)
     visitor->current_node = &visitor->current_list->head;
   }
 
-  if (visitor->current_node->used == 0) {
+  if (visitor->current_node->used_chars == 0) {
     visitor->current_node = visitor->current_node->next;
     pthread_mutex_unlock(&visitor->current_list->lock);
     *len = 0;
@@ -117,10 +117,10 @@ int get_messages(struct LogListVisitor *visitor, int *len, char **message)
     return 1;
   }
 
-  *len = visitor->current_node->used;
+  *len = visitor->current_node->used_chars;
   *message = visitor->current_node->info;
 
-  visitor->current_node->used = 0;
+  visitor->current_node->used_chars = 0;
 
   visitor->current_node = visitor->current_node->next;
   pthread_mutex_unlock(&visitor->current_list->lock);
