@@ -4,11 +4,13 @@
 [ ] Not finished
 [~] In Progress
 [X] Finished
+[/] Ignored
 
 ## General
 [~] Accept requests
 [~] Log each request to a file
 [~] Return result to browser
+[~] Errors handled gracefully. Ideally proxy doesn't terminate
 
 ## Hand in
 [ ] Extraneous Print Statements removed
@@ -19,29 +21,29 @@
 
 ## Uncategorized
 [ ] HTTP/1.0 GET requests
-[ ] [UTSAV] Host header sent
-[ ] [UTSAV] Host header of browser sent
-[ ] [UTSAV] User-Agent header sent
-[ ] [UTSAV] Connection header sent
-[ ] Proxy-Connection header sent
+[ ] [Debbie] Host header sent
+[ ] [Debbie] Host header of browser sent
+[ ] [Debbie] User-Agent header sent
+[ ] [Debbie] Connection header sent
+[ ] [Debbie] Proxy-Connection header sent
 [ ] [Debbie] Additional Browser headers sent unchanged
 [ ] All request forwarded as HTTP/1.0
-[ ] EOF sent to server connection when response finishes.
+[ ] [Debbie] EOF sent to server connection when response finishes.
+[ ] [Jai] Bad website filtering/blocklist
 [~] [Debbie, Jai] Port parsed out from URL
 [~] [Jai] Content-Length (?) Message size (?) parsed out from url/headers/response (?)
+[~] [UTSAV] Send HTML when user does a bad. (Blocklist, Bad URL)
+[~] [UTSAV] SIGPIPE ignored
+[~] [Debbie] Remove Keep-Alive headers
+[?] Handle binary data // I thiiiiink this is okay. It works with images and pdfs, so it should be fine, but I don't do any explicit processing to handle binary data!
 [X] [Debbie] Port 80 used by default if not stated
 [X] [Debbie] Logging in the format of [Date] browserIP URL size
-[ ] [Jai] Bad website filtering/blocklist
-[ ] [Debbie on Breaking Duty] Robust against malformed addresses
-[ ] [Debbie on Breaking Duty] Robust against malicious input
-[ ] Errors handled gracefully. Ideally proxy doesn't terminate
-[ ] No segfaults, memory leaks, or unclosed file descriptors on terminate.
+[X] [Debbie on Breaking Duty] Robust against malformed addresses
+[X] [Debbie on Breaking Duty] Robust against malicious input
 [X] Lowercase rio_* routines used (don't terminate proxy)
-[ ] SIGPIPE ignored
-[ ] On Premature connection termination: Close Socket. Print error message, continue
-[ ] errno = ECONNRESET handled
-[ ] if HTTP request fails, thread closes all open socket descriptors and frees memory resources
-[ ] Replace any Connection/Proxy-Connection: [connection-token] headers with Connection/Proxy-Connection: close
-[ ] [Debbie] Remove Keep-Alive headers
-[?] Handle binary data // I thiiiiink this is okay. It works with images and pdfs, so it should be fine, but I don't do any explicit processing to handle binary data!
 [X] Reduce redundancy in proxy.c and multithreaded_proxy.c
+[/] No segfaults, memory leaks, or unclosed file descriptors on terminate.
+[/] On Premature connection termination: Close Socket. Print error message, continue
+[/] errno = ECONNRESET handled
+[/] if HTTP request fails, thread closes all open socket descriptors and frees memory resources
+[/] Replace any Connection/Proxy-Connection: [connection-token] headers with Connection/Proxy-Connection: close
