@@ -1,6 +1,8 @@
 #include "requests.h"
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
+#include <time.h>
+#include <stdlib.h>
 
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
@@ -130,7 +132,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   return response;
 }
 
-void handle_request(int connection_fd, struct LogList *logger)
+void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
 {
   rio_t rio = {0};
   char buf[MAXLINE] = {0};
@@ -153,8 +155,18 @@ void handle_request(int connection_fd, struct LogList *logger)
   page += 1;
   char *port_string = uri_parse.port;
 
-  char logged_message[32768] = {0};
-  int log_len = sprintf(logged_message, "URI: %s Host: %s Page: %s Port: %s\n", uri, host, page, port_string);
+  // Get the date and time
+  time_t timeRN ;
+  struct tm *timeinfo;
+  char timestamp[80];
+  time(&timeRN);
+  timeinfo = localtime(&timeRN);
+  strftime(timestamp, sizeof(timestamp), "%m-%d-%Y %H:%M:%S", timeinfo);
+
+  int uri_size = 0;
+
+  char logged_message[MAXLINE];
+  int log_len = sprintf(logged_message, "[%s] %s %s: %s %d\n", timestamp, client_ip , host, page, uri_size);
   log_message(logger, logged_message, log_len);
 
   // big number here cause gcc tells me that host (of size MAXLINE) could be

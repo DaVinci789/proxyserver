@@ -34,3 +34,12 @@ int main(int argc, char **argv)
   fclose(LOGLIST_SEQUENTIAL_FD);
   return 0;
 }
+
+  // Getting the browser IP
+
+  // struct sockadd_in client_addr;
+  // socklen_t client_len = sizeof(client_addr);
+  // if(getpeername(connection_fd, (struct sockaddr *) &client_addr, &client_len) == 0)  {
+  //   char *browser_ip = inet_ntoa(client_addr.sin_addr);
+  // }
+
