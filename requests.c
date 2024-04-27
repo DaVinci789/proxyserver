@@ -140,8 +140,8 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   char uri[MAXLINE] = {0};
   char version[MAXLINE] = {0};
 
-  Rio_readinitb(&rio, connection_fd);
-  if (!Rio_readlineb(&rio, buf, MAXLINE)) {
+  rio_readinitb(&rio, connection_fd);
+  if (!rio_readlineb(&rio, buf, MAXLINE)) {
     return;
   }
 
@@ -177,8 +177,9 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   sprintf(message, "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", page, host);
 
   int port = 80;
-  if (port_string)
+  if (port_string) {
     port = atoi(port_string);
+  }
 
   int response_len = 0;
   char *response = send_request(port, host, message, strlen(message), &response_len);
