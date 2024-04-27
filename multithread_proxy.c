@@ -18,7 +18,7 @@ typedef struct log_thread_data {
 void *handle_client(void *vargp)
 {
   thread_data *thread_data = vargp;
-  handle_request(thread_data->connection_fd, thread_data->logger);
+  handle_request(thread_data->connection_fd, NULL, thread_data->logger);
   Close(thread_data->connection_fd);
   free(vargp);
   return NULL;
