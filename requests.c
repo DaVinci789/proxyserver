@@ -1,7 +1,6 @@
 #include "requests.h"
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
-#include <string.h>
 
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
