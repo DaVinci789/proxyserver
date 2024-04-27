@@ -1,9 +1,14 @@
 # Proxy Lab Checklist
 
+## Legend
+[ ] Not finished
+[~] In Progress
+[X] Finished
+
 ## General
-[ ] Accept requests
-[ ] Log each request to a file
-[ ] Return result to browser
+[~] Accept requests
+[~] Log each request to a file
+[~] Return result to browser
 
 ## Hand in
 [ ] Extraneous Print Statements removed
@@ -22,20 +27,21 @@
 [ ] [Debbie] Additional Browser headers sent unchanged
 [ ] All request forwarded as HTTP/1.0
 [ ] EOF sent to server connection when response finishes.
-[ ] [Debbie] Port parsed out from URL
-[ ] [Debbie] Port 80 used by default if not stated
-[ ] [Debbie] Logging in the format of [Date] browserIP URL size
-[ ] Bad website filtering/blocklist
-[ ] Robust against malformed addresses
-[ ] Robust against malicious input
+[~] [Debbie, Jai] Port parsed out from URL
+[~] [Jai] Content-Length (?) Message size (?) parsed out from url/headers/response (?)
+[X] [Debbie] Port 80 used by default if not stated
+[X] [Debbie] Logging in the format of [Date] browserIP URL size
+[ ] [Jai] Bad website filtering/blocklist
+[ ] [Debbie on Breaking Duty] Robust against malformed addresses
+[ ] [Debbie on Breaking Duty] Robust against malicious input
 [ ] Errors handled gracefully. Ideally proxy doesn't terminate
 [ ] No segfaults, memory leaks, or unclosed file descriptors on terminate.
-[ ] Lowercase rio_* routines used (don't terminate proxy)
+[X] Lowercase rio_* routines used (don't terminate proxy)
 [ ] SIGPIPE ignored
 [ ] On Premature connection termination: Close Socket. Print error message, continue
 [ ] errno = ECONNRESET handled
 [ ] if HTTP request fails, thread closes all open socket descriptors and frees memory resources
 [ ] Replace any Connection/Proxy-Connection: [connection-token] headers with Connection/Proxy-Connection: close
 [ ] [Debbie] Remove Keep-Alive headers
-[ ] Handle binary data
-[ ] Reduce redundancy in proxy.c and multithreaded_proxy.c
+[?] Handle binary data // I thiiiiink this is okay. It works with images and pdfs, so it should be fine, but I don't do any explicit processing to handle binary data!
+[X] Reduce redundancy in proxy.c and multithreaded_proxy.c
