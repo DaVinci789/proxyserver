@@ -151,23 +151,27 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   struct uri uri_parse = {0};
   uriparse(uri, &uri_parse);
   char *host = uri_parse.host;
+  if (!host) host = "NOHOST";
+
   char *page = uri_parse.path;
+  if (!page) page = "/";
   page += 1;
   char *port_string = uri_parse.port;
 
   // Get the date and time
-  time_t timeRN ;
-  struct tm *timeinfo;
-  char timestamp[80];
+  time_t timeRN = {0};
+  struct tm *timeinfo = NULL;
+  char timestamp[80] = {0};
   time(&timeRN);
   timeinfo = localtime(&timeRN);
   strftime(timestamp, sizeof(timestamp), "%m-%d-%Y %H:%M:%S", timeinfo);
 
   int uri_size = 0;
 
-  char logged_message[MAXLINE];
-  int log_len = sprintf(logged_message, "[%s] %s %s: %s %d\n", timestamp, client_ip , host, page, uri_size);
-  log_message(logger, logged_message, log_len);
+  char logged_message[32768] = {0};
+  /*int log_len = sprintf(logged_message, "[%s] %s %s: %s %d\n", timestamp, client_ip , host, page, uri_size);
+  log_message(logger, logged_message, log_len);*/
+  printf("[%s] %s %s: %s %d\n", timestamp, client_ip , host, page, uri_size);
 
   // big number here cause gcc tells me that host (of size MAXLINE) could be
   // too chonky for a `message` var of size MAXLINE.
