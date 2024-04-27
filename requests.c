@@ -161,7 +161,7 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   // Get the date and time
   time_t timeRN = {0};
   struct tm *timeinfo = NULL;
-  char timestamp[80] = {0};
+  char timestamp[8000] = {0};        // proxy will close after this amount of time
   time(&timeRN);
   timeinfo = localtime(&timeRN);
   strftime(timestamp, sizeof(timestamp), "%m-%d-%Y %H:%M:%S", timeinfo);
