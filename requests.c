@@ -1,8 +1,10 @@
 #include "requests.h"
+#include "validate_uri.h"
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
@@ -147,6 +149,11 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
 
   // read the http request
   sscanf(buf, "%s %s %s", method, uri, version);
+  char *cleaned_uri = sanitize_uri(uri);
+  if (!cleaned_uri) return;
+  memcpy(uri, cleaned_uri, strlen(cleaned_uri) + 1);
+  free(cleaned_uri);
+  cleaned_uri = NULL;
 
   struct uri uri_parse = {0};
   uriparse(uri, &uri_parse);

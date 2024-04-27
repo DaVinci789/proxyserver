@@ -26,14 +26,17 @@ proxy.o: proxy.c csapp.h
 requests.o: requests.c csapp.h
 	$(CC) $(CFLAGS) -c requests.c
 
+validate_uri.o: validate_uri.c
+	$(CC) $(CFLAGS) -c validate_uri.c
+
 multithread_proxy.o: multithread_proxy.c csapp.h
 	$(CC) $(CFLAGS) -c multithread_proxy.c
 
-proxy: requests.o proxy.o csapp.o
-	$(CC) $(CFLAGS) uriparse.c requests.o proxy.o csapp.o -o proxy $(LDFLAGS)
+proxy: validate_uri.o requests.o proxy.o csapp.o
+	$(CC) $(CFLAGS) uriparse.c validate_uri.o requests.o proxy.o csapp.o -o proxy $(LDFLAGS)
 
-multithread_proxy: requests.o multithread_proxy.o csapp.o
-	$(CC) $(CFLAGS) uriparse.c requests.o multithread_proxy.o csapp.o -o multithread_proxy $(LDFLAGS)
+multithread_proxy: validate_uri.o requests.o multithread_proxy.o csapp.o
+	$(CC) $(CFLAGS) uriparse.c validate_uri.o requests.o multithread_proxy.o csapp.o -o multithread_proxy $(LDFLAGS)
 
 # Creates a tarball in ../proxylab-handin.tar that you can then
 # hand in. DO NOT MODIFY THIS!
