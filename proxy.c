@@ -22,11 +22,12 @@ int main(int argc, char **argv)
 
 
   while (1) {
+    char *client_ip = "ip";
     struct sockaddr_storage clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
     int connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
     log_message(head, "Accepted new connection!\n", sizeof("Accepted new connection!\n"));
-    handle_request(connection_fd, head);
+    handle_request(connection_fd, client_ip, head);
     Close(connection_fd);
   }
 
