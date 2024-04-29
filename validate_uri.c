@@ -3,6 +3,8 @@
 #include <stdbool.h> 
 #include <ctype.h>
 
+#define MAXLINE 8192
+
 // Check for valid characters
 static bool valid_uri_char(char c)
 {
@@ -78,7 +80,11 @@ static void sanitize_html(const char *input, char *output)
     case '\'':
       strcpy(dest, "&#39;");
       dest += 5;
-      break;                                      
+      break;
+    default:
+      *dest = *source;
+      dest++;
+      break;
     }
     source++;
   } 
@@ -121,18 +127,18 @@ char *sanitize_uri(const char *uri)
   } 
   
   else {
-    char *no_html_uri = malloc(strlen(input_uri) + 1); 
+    char *no_html_uri = malloc(MAXLINE);
     if (no_html_uri == NULL) return NULL;
     sanitize_html(input_uri, no_html_uri);
     
-    char *no_sql_uri = malloc(strlen(no_html_uri) + 1); 
+    char *no_sql_uri = malloc(MAXLINE);
     if (no_sql_uri == NULL) {
       free(no_html_uri);
       return NULL;
     }
     sanitize_sql(no_html_uri, no_sql_uri);
     
-    char *no_command_uri = malloc(strlen(no_sql_uri) + 1);
+    char *no_command_uri = malloc(MAXLINE);
     if (no_command_uri == NULL) {
       free(no_html_uri);
       free(no_sql_uri);
