@@ -5,15 +5,22 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
-  char *bf = haystack;
-  char *pt = needle;
-  char *p = bf;
+  char const *bf = haystack;
+  char const *pt = needle;
+  char *p = haystack;
  
   while (needlelen <= (haystacklen - (p - bf))) {
     if (NULL != (p = memchr(p, (int)(*pt), haystacklen - (p - bf)))) {
+
+      // checks if the 'size of p,' that is, the difference between p and the end of the buffer
+      // is smaller than the length of the needle.
+      // (I wonder why this check is necessary... I assumed the `while` would have taken care of it)
+      if (needlelen > ((bf + haystacklen) - p)) break; 
+
       if (0 == memcmp(p, needle, needlelen)) {
         return p;
       } else {
@@ -43,8 +50,11 @@ static void *memmem_ci(void *haystack, size_t haystacklen, void *needle, size_t 
     needle_lower[needlelen_copy - 1] = tolower(((char*)needle)[needlelen_copy - 1]);
     needlelen_copy -= 1;
   }
-
-  return memmem(haystack_lower, haystacklen, needle_lower, needlelen);
+  char *result = memmem(haystack_lower, haystacklen, needle_lower, needlelen);
+  free(haystack_lower);
+  free(needle_lower);
+  if (!result) return result;
+  return ((char*) haystack) + (result - haystack_lower);
 }
 
 char *send_request(int port_number, char *host, char *message, int message_strlen, int *response_out_len)
@@ -94,7 +104,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   // Apparently, most web servers allocate an 8K buffer upfront[1]
   // and going over that limit results in a 413 Request too large
   // error, so we're following in that tradition.
-  // [1] -- https://stackoverflow.com/questions/686217/maximum-on-http-header-values
+  // [1] https://stackoverflow.com/questions/686217/maximum-on-http-header-values
   char *response = calloc(1 << 13, 1);
   int resized_buffer = 0;
   total = 1 << 13;
@@ -104,7 +114,6 @@ char *send_request(int port_number, char *host, char *message, int message_strle
     if (bytes < 0) {
       fprintf(stderr, "ERROR reading response from socket\n");
       return NULL;
-      //exit(1);
     }
 
     received += bytes;
@@ -118,10 +127,8 @@ char *send_request(int port_number, char *host, char *message, int message_strle
         char content_length_str[MAXLINE] = {0};
         sscanf(content_length_location, "%*[Cc]ontent-%*[Ll]ength: %99[^\r]\r\n", content_length_str);
         int content_length = atoi(content_length_str);
-        printf("%d\n", content_length);
 
         if (content_length > total) {
-          printf("Allocate!\n");
           total += content_length;
           response = realloc(response, total);
         }
@@ -137,18 +144,21 @@ char *send_request(int port_number, char *host, char *message, int message_strle
 void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
 {
   rio_t rio = {0};
-  char buf[MAXLINE] = {0};
   char method[MAXLINE] = {0};
   char uri[MAXLINE] = {0};
   char version[MAXLINE] = {0};
 
+  char *buf = malloc(MAXLINE);
+  char *current = buf;
+  int buf_size = MAXLINE;
   rio_readinitb(&rio, connection_fd);
-  if (!rio_readlineb(&rio, buf, MAXLINE)) {
-    return;
-  }
+  ptrdiff_t http_content_size = 0;
+  ptrdiff_t http_content_total = 0;
+
+  http_content_total = rio_readlineb(&rio, current, MAXLINE);
 
   // read the http request
-  sscanf(buf, "%s %s %s", method, uri, version);
+  sscanf(current, "%s %s %s", method, uri, version);
   char *cleaned_uri = sanitize_uri(uri);
   if (!cleaned_uri) return;
   memcpy(uri, cleaned_uri, strlen(cleaned_uri) + 1);
@@ -165,6 +175,29 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   page += 1;
   char *port_string = uri_parse.port;
 
+  http_content_total = sprintf(current, "GET /%s HTTP/1.0\r\n", page);
+  buf_size += MAXLINE;
+
+  do {
+    buf = realloc(buf, buf_size);
+    current = buf + http_content_total;
+    http_content_size = rio_readlineb(&rio, current, MAXLINE);
+
+    #define STATIC(s) s, sizeof(s) - 1
+    if (memmem_ci(current, http_content_size, STATIC("User-Agent"))) {
+      continue;
+    }
+
+    if (memmem_ci(current, http_content_size, STATIC("Connection: keep-alive"))) {
+      strcpy(current, "Connection: close\r\n");
+      http_content_size = sizeof("Connection: close\r\n") - 1;
+    }
+    #undef STATIC
+
+    http_content_total += http_content_size;
+    buf_size += MAXLINE;
+  } while (NULL == memmem("\r\n", sizeof("\r\n") - 1, current, http_content_size));
+
   // Get the date and time
   time_t timeRN = {0};
   struct tm *timeinfo = NULL;
@@ -173,19 +206,9 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   timeinfo = localtime(&timeRN);
   strftime(timestamp, sizeof(timestamp), "%m-%d-%Y %H:%M:%S", timeinfo);
 
-  int uri_size = 0;
-
   char logged_message[32768] = {0};
-  /*int log_len = sprintf(logged_message, "[%s] %s %s: %s %d\n", timestamp, client_ip , host, page, uri_size);
-  log_message(logger, logged_message, log_len);*/
-  printf("[%s] %s %s: %s %d\n", timestamp, client_ip , host, page, uri_size);
-
-  // big number here cause gcc tells me that host (of size MAXLINE) could be
-  // too chonky for a `message` var of size MAXLINE.
-  // so make it large enough that it can fit a `page` the size of MAXLINE.
-  char message[32768] = {0}; // 32768 == 2 * 2 * 8192 (MAXLINE constant).
-                             // IDK if doing MAXLINE * 2 makes this a VLA.
-  sprintf(message, "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n", page, host);
+  int log_len = sprintf(logged_message, "[%s] %s %s: %s %ld\n", timestamp, client_ip , host, page, http_content_total);
+  log_message(logger, logged_message, log_len);
 
   int port = 80;
   if (port_string) {
@@ -193,8 +216,8 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
   }
 
   int response_len = 0;
-  char *response = send_request(port, host, message, strlen(message), &response_len);
+  char *response = send_request(port, host, buf, http_content_total, &response_len);
   Write(connection_fd, response, response_len);
   free(response);
-  response = NULL;
+  free(buf);
 }
