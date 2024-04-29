@@ -25,7 +25,6 @@ int main(int argc, char **argv)
     socklen_t client_len = sizeof(clientaddr);
     int connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
     char *client_ip = inet_ntoa(clientaddr.sin_addr);
-    log_message(head, "Accepted new connection!\n", sizeof("Accepted new connection!\n"));
     handle_request(connection_fd, client_ip, head);
     Close(connection_fd);
   }

@@ -7,6 +7,7 @@
 
 typedef struct thread_data {
   int connection_fd;
+  char client_ip[MAXLINE];
   struct LogList *logger;
 } thread_data;
 
@@ -18,7 +19,7 @@ typedef struct log_thread_data {
 void *handle_client(void *vargp)
 {
   thread_data *thread_data = vargp;
-  handle_request(thread_data->connection_fd, NULL, thread_data->logger);
+  handle_request(thread_data->connection_fd, thread_data->client_ip, thread_data->logger);
   Close(thread_data->connection_fd);
   free(vargp);
   return NULL;
@@ -70,11 +71,12 @@ int main(int argc, char **argv)
   pthread_create(&logging_id, NULL, &logging, (void *) log_thread_data);
   pthread_detach(logging_id);
 
-  while (1) {
-    struct sockaddr_storage clientaddr = {0};
+  while (!exit_status) {
+    struct sockaddr_in clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
     thread_data *thread_data = malloc(sizeof(*thread_data));
     thread_data->connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
+    strcpy(thread_data->client_ip, inet_ntoa(clientaddr.sin_addr));
 
     log_message(head, "Accepted new connection!\n", sizeof("Accepted new connection!\n"));
 
