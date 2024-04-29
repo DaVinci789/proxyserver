@@ -3,6 +3,7 @@
 *.gzip
 *.bzip
 *.gz
+*.swp
 proxy
 multithread_proxy
 core
