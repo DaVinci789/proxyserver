@@ -16,6 +16,13 @@ typedef struct log_thread_data {
   struct LogList *head;
 } log_thread_data;
 
+volatile int exit_status = 0;
+
+void exit_signal(int signum)
+{
+  exit_status = 1;
+}
+
 void *handle_client(void *vargp)
 {
   thread_data *thread_data = vargp;
@@ -29,7 +36,7 @@ void *logging(void *vargp)
 {
   log_thread_data *data = (log_thread_data *) vargp;
   struct LogList *head = data->head;
-  while (1) {
+  while (!exit_status) {
     struct LogListVisitor visitor = {0};
     visitor.current_list = head;
     int len = 0;
@@ -47,6 +54,7 @@ void *logging(void *vargp)
     }
     if (dirty) fflush(data->log_file_fd);
   }
+  return NULL;
 }
 
 int main(int argc, char **argv)
@@ -55,6 +63,10 @@ int main(int argc, char **argv)
     fprintf(stderr, "usage: %s <port>\n", argv[0]);
     exit(1);
   }
+
+  struct sigaction handler = {0};
+  handler.sa_handler = exit_signal;
+  sigaction(SIGINT, &handler, NULL);
 
   int listen_fd  = Open_listenfd(argv[1]);
 
@@ -78,7 +90,10 @@ int main(int argc, char **argv)
     thread_data->connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
     strcpy(thread_data->client_ip, inet_ntoa(clientaddr.sin_addr));
 
-    log_message(head, "Accepted new connection!\n", sizeof("Accepted new connection!\n"));
+    if (exit_status) {
+      free(thread_data);
+      break;
+    }
 
     *tail = init_loglist();
     thread_data->logger = *tail;
@@ -89,8 +104,10 @@ int main(int argc, char **argv)
     pthread_detach(thread_id);
   }
 
+  free(log_thread_data);
   close(listen_fd);
   fclose(logfile);
   destroy_loglist(head);
+  pthread_kill(logging_id, SIGINT);
   return 0;
 }
