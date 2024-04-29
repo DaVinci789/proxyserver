@@ -67,6 +67,7 @@ int main(int argc, char **argv)
   struct sigaction handler = {0};
   handler.sa_handler = exit_signal;
   sigaction(SIGINT, &handler, NULL);
+  sigaction(SIGPIPE, &(struct sigaction){.sa_handler = SIG_IGN}, NULL);
 
   int listen_fd  = Open_listenfd(argv[1]);
 
