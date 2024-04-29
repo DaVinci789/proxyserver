@@ -1,10 +1,16 @@
 #include "csapp.h"
 
 #include "requests.h"
+#include "blocklist.h"
 
 #define LOGLIST_SEQUENTIAL
 FILE *LOGLIST_SEQUENTIAL_FD = NULL;
 #define LOGLIST_IMPLEMENTATION
+
+#ifndef RELEASE
+  #define LOGLIST_PRINTF
+#endif
+
 #include "loglist.h"
 
 int main(int argc, char **argv)
@@ -20,12 +26,19 @@ int main(int argc, char **argv)
   LOGLIST_SEQUENTIAL_FD = logfile;
   struct LogList *head = init_loglist();
 
+  struct Blocklist list = {0}; // @TODO. File parsing
+/*   list.sites[0] = "warren.sewanee.edu/";
+  list.sites_lens[0] = sizeof("warren.sewanee.edu/") - 1; */
+
+  list.sites[0] = "httpforever.com/";
+  list.sites_lens[0] = sizeof("httpforever.com/") - 1;
+
   while (1) {
     struct sockaddr_in clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
     int connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
     char *client_ip = inet_ntoa(clientaddr.sin_addr);
-    handle_request(connection_fd, client_ip, head);
+    handle_request(connection_fd, client_ip, list, head);
     Close(connection_fd);
   }
 
@@ -33,12 +46,4 @@ int main(int argc, char **argv)
   fclose(LOGLIST_SEQUENTIAL_FD);
   return 0;
 }
-
-  // Getting the browser IP
-
-  // struct sockadd_in client_addr;
-  // socklen_t client_len = sizeof(client_addr);
-  // if(getpeername(connection_fd, (struct sockaddr *) &client_addr, &client_len) == 0)  {
-  //   char *browser_ip = inet_ntoa(client_addr.sin_addr);
-  // }
 

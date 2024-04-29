@@ -5,9 +5,12 @@
 #define LOGLIST_IMPLEMENTATION
 #include "loglist.h"
 
+#include "blocklist.h"
+
 typedef struct thread_data {
   int connection_fd;
   char client_ip[MAXLINE];
+  struct Blocklist list;
   struct LogList *logger;
 } thread_data;
 
@@ -26,7 +29,7 @@ void exit_signal(int signum)
 void *handle_client(void *vargp)
 {
   thread_data *thread_data = vargp;
-  handle_request(thread_data->connection_fd, thread_data->client_ip, thread_data->logger);
+  handle_request(thread_data->connection_fd, thread_data->client_ip, (struct Blocklist) {0}, thread_data->logger);
   Close(thread_data->connection_fd);
   free(vargp);
   return NULL;
@@ -71,7 +74,7 @@ int main(int argc, char **argv)
 
   int listen_fd  = Open_listenfd(argv[1]);
 
-  log_thread_data *log_thread_data = malloc(sizeof(*log_thread_data));
+  log_thread_data *log_thread_data = calloc(sizeof(*log_thread_data), 1);
 
   FILE *logfile = fopen("proxy.log", "w");
   struct LogList *head = init_loglist();

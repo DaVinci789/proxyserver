@@ -1,0 +1,3 @@
+warren.sewanee.edu/manacjs0
+httpforever.com
+ocsp.pki.goog

@@ -1,5 +1,6 @@
 #include "requests.h"
 #include "validate_uri.h"
+#include "blocklist.h"
 #include "csapp.h"
 #include "uriparse.h" // Ask carl if external libraries are allowed.
 #include <time.h>
@@ -136,12 +137,14 @@ char *send_request(int port_number, char *host, char *message, int message_strle
     }
   } while (bytes != 0);
 
+  char the_eof = EOF;
+  write(sockfd, &the_eof, 1);
   close(sockfd);
   *response_out_len = received;
   return response;
 }
 
-void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
+void handle_request(int connection_fd, char *client_ip, struct Blocklist blocklist, struct LogList *logger)
 {
   rio_t rio = {0};
   char method[MAXLINE] = {0};
@@ -157,7 +160,8 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
 
   http_content_total = rio_readlineb(&rio, current, MAXLINE);
 
-  // read the http request
+  // read the http request.
+  // First line of the request is the http method, uri, version
   sscanf(current, "%s %s %s", method, uri, version);
   char *cleaned_uri = sanitize_uri(uri);
   if (!cleaned_uri) return;
@@ -172,8 +176,15 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
 
   char *page = uri_parse.path;
   if (!page) page = "/";
-  page += 1;
+  page += 1; // @Safety. This can mess up with the literal above.
   char *port_string = uri_parse.port;
+
+  if (!check_block(blocklist, host, page)) {
+    char blockmessage[MAXLINE] = {0};
+    int len = sprintf(blockmessage, "Alert! Client attempted to access %s!\n", host);
+    log_message(logger, blockmessage, len);
+    return;
+  }
 
   http_content_total = sprintf(current, "GET /%s HTTP/1.0\r\n", page);
   buf_size += MAXLINE;
@@ -198,16 +209,8 @@ void handle_request(int connection_fd, char *client_ip, struct LogList *logger)
     buf_size += MAXLINE;
   } while (NULL == memmem("\r\n", sizeof("\r\n") - 1, current, http_content_size));
 
-  // Get the date and time
-  time_t timeRN = {0};
-  struct tm *timeinfo = NULL;
-  char timestamp[8000] = {0};        // proxy will close after this amount of time
-  time(&timeRN);
-  timeinfo = localtime(&timeRN);
-  strftime(timestamp, sizeof(timestamp), "%m-%d-%Y %H:%M:%S", timeinfo);
-
   char logged_message[32768] = {0};
-  int log_len = sprintf(logged_message, "[%s] %s %s: %s %ld\n", timestamp, client_ip , host, page, http_content_total);
+  int log_len = sprintf(logged_message, "%s %s: %s %ld\n", client_ip , host, page, http_content_total);
   log_message(logger, logged_message, log_len);
 
   int port = 80;

@@ -10,7 +10,7 @@ CC = gcc
 CFLAGS = -g -Wall -Wextra -pedantic -fsanitize=address -fsanitize=undefined #-fsanitize=thread
 
 ifeq ($(RELEASE), 1)
-	CFLAGS = -Wall -Wextra -pedantic
+	CFLAGS = -Wall -Wextra -pedantic -DRELEASE
 endif
 
 LDFLAGS = -lpthread 
@@ -23,20 +23,23 @@ csapp.o: csapp.c csapp.h
 proxy.o: proxy.c csapp.h
 	$(CC) $(CFLAGS) -c proxy.c
 
+multithread_proxy.o: multithread_proxy.c csapp.h
+	$(CC) $(CFLAGS) -c multithread_proxy.c
+
 requests.o: requests.c csapp.h
 	$(CC) $(CFLAGS) -c requests.c
 
 validate_uri.o: validate_uri.c
 	$(CC) $(CFLAGS) -c validate_uri.c
 
-multithread_proxy.o: multithread_proxy.c csapp.h
-	$(CC) $(CFLAGS) -c multithread_proxy.c
+blocklist.o: blocklist.c
+	$(CC) $(CFLAGS) -c blocklist.c
 
-proxy: validate_uri.o requests.o proxy.o csapp.o
-	$(CC) $(CFLAGS) uriparse.c validate_uri.o requests.o proxy.o csapp.o -o proxy $(LDFLAGS)
+proxy: blocklist.o validate_uri.o requests.o proxy.o csapp.o
+	$(CC) $(CFLAGS) uriparse.c blocklist.o validate_uri.o requests.o proxy.o csapp.o -o proxy $(LDFLAGS)
 
-multithread_proxy: validate_uri.o requests.o multithread_proxy.o csapp.o
-	$(CC) $(CFLAGS) uriparse.c validate_uri.o requests.o multithread_proxy.o csapp.o -o multithread_proxy $(LDFLAGS)
+multithread_proxy: blocklist.o validate_uri.o requests.o multithread_proxy.o csapp.o
+	$(CC) $(CFLAGS) uriparse.c blocklist.o validate_uri.o requests.o multithread_proxy.o csapp.o -o multithread_proxy $(LDFLAGS)
 
 # Creates a tarball in ../proxylab-handin.tar that you can then
 # hand in. DO NOT MODIFY THIS!
