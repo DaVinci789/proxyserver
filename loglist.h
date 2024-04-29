@@ -1,6 +1,7 @@
 #ifndef LOGLIST_H
 #define LOGLIST_H
 #include <pthread.h>
+#include <time.h>
 
 #ifndef LOGLIST_MAXBUF
   #define LOGLIST_MAXBUF 1 << 8
@@ -37,14 +38,39 @@ void destroy_loglist(struct LogList *head);
 
 void log_message(struct LogList *logger, char *message, int message_len)
 {
+  // Get the date and time
+  time_t timeRN = {0};
+  struct tm *timeinfo = NULL;
+  char timestamp[8000] = {0};        // proxy will close after this amount of time
+  char timestamp_format[8003] = {0};        // proxy will close after this amount of time
+  time(&timeRN);
+  timeinfo = localtime(&timeRN);
+  int timestamp_len = strftime(timestamp, sizeof(timestamp), "%m-%d-%Y %H:%M:%S", timeinfo);
+  timestamp_len = sprintf(timestamp_format, "[%s] ", timestamp);
+
+#ifdef LOGLIST_PRINTF
+  #include <stdio.h>
+  fprintf(stdout, "%.*s %.*s", timestamp_len - 1, timestamp_format, message_len, message);
+  fflush(stdout);
+#endif
 #ifdef LOGLIST_SEQUENTIAL
   #include <stdio.h>
-  printf("%.*s", message_len, message);
-  fprintf(LOGLIST_SEQUENTIAL_FD, "%.*s", message_len, message);
+  fprintf(LOGLIST_SEQUENTIAL_FD, "%.*s %.*s", timestamp_len - 1, timestamp_format, message_len, message);
   fflush(LOGLIST_SEQUENTIAL_FD);
   return;
 #endif
   pthread_mutex_lock(&logger->lock);
+  for (int i = 0; i < timestamp_len; i++) {
+    if (logger->tail->used_chars == LOGLIST_MAXBUF) {
+      if (logger->tail->next == NULL) {
+        logger->tail->next = calloc(sizeof(*logger->tail), 1);
+      }
+      logger->tail = logger->tail->next;
+    }
+    logger->tail->info[logger->tail->used_chars] = timestamp_format[i];
+    logger->tail->used_chars += 1;
+  }
+
   for (int i = 0; i < message_len; i++) {
     if (logger->tail->used_chars == LOGLIST_MAXBUF) {
       if (logger->tail->next == NULL) {
