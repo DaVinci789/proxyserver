@@ -1,4 +1,5 @@
 #include <stdlib.h> 
+#include <stdio.h>
 #include <string.h> 
 #include <stdbool.h> 
 #include <ctype.h>
@@ -57,64 +58,122 @@ static bool safe_path(const char *path)
 // XSS protection (HTML/javascript code) 
 static void sanitize_html(const char *input, char *output)
 {
-  const char *source = input;
-  char *dest = output;
-  while (*source) {
-    switch (*source) {
-    case '<': 
-      strcpy(dest, "&lt;"); 
-      dest += 4; 
-      break;
-    case '>':
-      strcpy(dest, "&gt;");
-      dest += 4;
-      break;
-    case '&':
-      strcpy(dest, "&amp;");
-      dest += 5;
-      break; 
-    case '"':
-      strcpy(dest, "&quot;");
-      dest += 6;
-      break;
-    case '\'':
-      strcpy(dest, "&#39;");
-      dest += 5;
-      break;
-    default:
-      *dest = *source;
-      dest++;
-      break;
-    }
-    source++;
-  } 
-  *dest = '\0';
+    const char *source = input;
+    char *dest = output;
+    int inside_script = 0; // Flag to track if currently inside a <script> tag
+
+    while (*source) {
+        // Check for start of script tag (case-insensitive)
+        if (strncasecmp(source, "<script>", strlen("<script>")) == 0) {
+            inside_script = 1;
+            source += strlen("<script>");
+            continue;
+        }
+        // Check for end of script tag (case-insensitive)
+        if (strncasecmp(source, "</script>", strlen("</script>")) == 0) {
+            inside_script = 0;
+            source += strlen("</script>");
+            continue;
+        }
+        // If not inside a script tag, sanitize the HTML
+        if (!inside_script) {
+            switch (*source) {
+                case '<': 
+                    strcpy(dest, "&lt;"); 
+                    dest += 4; 
+                    break;
+                case '>':
+                    strcpy(dest, "&gt;");
+                    dest += 4;
+                    break;
+                case '&':
+                    strcpy(dest, "&amp;");
+                    dest += 5;
+                    break; 
+                case '"':
+                    strcpy(dest, "&quot;");
+                    dest += 6;
+                    break;
+                case '\'':
+                    strcpy(dest, "&#39;");
+                    dest += 5;
+                    break;
+                default:
+                    *dest = *source;
+                    dest++;
+                    break;
+            }
+        }
+        source++;
+    } 
+    *dest = '\0';
 }
 
 static void sanitize_sql(const char *input, char *output)
 {
   const char *source = input;
   char *dest = output;
-  while (*source) {
-    if (*source == '\'') {
-      *dest++ = '\\';
+
+  const char *sql_keywords[] = {"SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "EXEC", "TRUNCATE"};
+
+while (*source) {
+        // Check for single quotes and escape them
+        if (*source == '\'') {
+            strcpy(dest, "''");
+            dest += 2;
+        }
+        // Check for SQL keywords and neutralize them
+        else if (isalpha(*source)) {
+            char word[256]; // Assuming a maximum length for a word
+            int i = 0;
+            while (isalpha(*source)) {
+                word[i++] = *source;
+                source++;
+            }
+            word[i] = '\0'; // Null-terminate the word
+
+            // Check if the word is a SQL keyword
+            for (int j = 0; j < sizeof(sql_keywords) / sizeof(sql_keywords[0]); j++) {
+                if (strcasecmp(word, sql_keywords[j]) == 0) {
+                    // Neutralize the SQL keyword by replacing it with an empty string
+                    word[0] = '\0';
+                    break;
+                }
+            }
+            continue; // Skip the increment below to avoid missing the next character
+        }
+        // Copy other characters as is
+        *dest = *source;
+        dest++;
+        source++;
     }
-    *dest++ = *source++;
-  }
-  *dest = '\0';
+    *dest = '\0'; // Null-terminate the output string
 }
 
 static void sanitize_command(const char *input, char *output)
 {
-  const char *source = input;
-  char *dest = output;
-  while (*source) {
-    if (*source == ';' || *source == '&' || *source == '|') {
-      *dest++ = '\\';
+    const char *source = input;
+    char *dest = output;
+
+    // Disallowed commands
+    const char *commands[] = {"rm", "ls", "cd", "wget", "curl", "shutdown", "reboot"};
+
+    while (*source) {
+        // Check for disallowed commands
+        for (int i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
+            size_t cmd_len = strlen(commands[i]);
+            if (strncasecmp(source, commands[i], cmd_len) == 0 && !isalpha(*(source + cmd_len))) {
+                // Skip the disallowed command
+                source += cmd_len;
+                continue;
+            }
+        }
+        // Copy other characters as is
+        *dest = *source;
+        dest++;
+        source++;
     }
-    *dest++ = *source++;
-  }
-  *dest = '\0';
+    *dest = '\0'; // Null-terminate the output string
 }
 
 

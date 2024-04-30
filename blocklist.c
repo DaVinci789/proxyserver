@@ -4,6 +4,7 @@
 
 #define MAXLINE 8192
 
+// Check if uri is on the blocklist
 int check_block(struct Blocklist list, char *host, char *page)
 {
   for (int i = 0; i < MAXBLOCKSITES; i++) {

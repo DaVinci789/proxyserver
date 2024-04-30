@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stddef.h>
 
+// Find substring in the string
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
   char const *bf = haystack;
@@ -15,11 +16,15 @@ static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t nee
   char *p = haystack;
  
   while (needlelen <= (haystacklen - (p - bf))) {
+    // Search for first character of needle, if found, p is updated to point to this location
     if (NULL != (p = memchr(p, (int)(*pt), haystacklen - (p - bf)))) {
 
       // checks if the 'size of p,' that is, the difference between p and the end of the buffer
       // is smaller than the length of the needle.
       // (I wonder why this check is necessary... I assumed the `while` would have taken care of it)
+      
+      // Check there is enough space in haystack to fit entire needle
+      // If not then break as further search is unnecessary (this is for efficiency)
       if (needlelen > ((bf + haystacklen) - p)) break; 
 
       if (0 == memcmp(p, needle, needlelen)) {
@@ -36,6 +41,7 @@ static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t nee
 }
 
 // ci stands for case insensitive
+// Why do we have 2 separate functions for this, could they not be put in one?
 static void *memmem_ci(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
   char *haystack_lower = malloc(haystacklen);
@@ -69,21 +75,28 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   long total = 0;
   *response_out_len = 0;
 
+  // Create socket
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+  // Get host info
   server = gethostbyname(host);
   if (!server) {
     *response_out_len = 0;
     return NULL;
   }
+
+  // Initialize server address structure
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(port_number);
   memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
+  // Connect to server
   if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
     fprintf(stderr, "ERROR connecting\n");
     return NULL;
   }
 
+  // Send HTTP request message
   total = message_strlen;
   sent = 0;
   do {
@@ -99,6 +112,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
     sent += bytes;
   } while (sent < total);
 
+  // Send HTTP response message
   // Why 2^13? Well, the http spec doesn't specify a maximum limit
   // on the number of headers a request can send, but we need to
   // allocate a buffer of *some* size, still!
@@ -119,6 +133,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
 
     received += bytes;
 
+    // Resize buffer if content-length header found
     if (resized_buffer == 0) {
       char *content_length_location = memmem_ci(response, received,
                                              "Content-Length: ", sizeof("Content-Length: ") - 1);
@@ -137,6 +152,7 @@ char *send_request(int port_number, char *host, char *message, int message_strle
     }
   } while (bytes != 0);
 
+  // Signal end of response
   char the_eof = EOF;
   write(sockfd, &the_eof, 1);
   close(sockfd);
@@ -163,6 +179,8 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
   // read the http request.
   // First line of the request is the http method, uri, version
   sscanf(current, "%s %s %s", method, uri, version);
+
+  // Sanitize uri for malformed addresses/malicious input
   char *cleaned_uri = sanitize_uri(uri);
   if (!cleaned_uri) return;
   memcpy(uri, cleaned_uri, strlen(cleaned_uri) + 1);
@@ -179,6 +197,8 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
   page += 1; // @Safety. This can mess up with the literal above.
   char *port_string = uri_parse.port;
 
+  // Check if uri is on the blocklist
+  // Shouldn't this be before sanitizing?
   if (!check_block(blocklist, host, page)) {
     char blockmessage[MAXLINE] = {0};
     int len = sprintf(blockmessage, "Alert! Client attempted to access %s!\n", host);
@@ -186,9 +206,11 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
     return;
   }
 
+  // Make HTTP GET request message
   http_content_total = sprintf(current, "GET /%s HTTP/1.0\r\n", page);
   buf_size += MAXLINE;
 
+  // Read remaining headers and modify if needed
   do {
     buf = realloc(buf, buf_size);
     current = buf + http_content_total;
@@ -213,6 +235,7 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
   int log_len = sprintf(logged_message, "%s %s: %s %ld\n", client_ip , host, page, http_content_total);
   log_message(logger, logged_message, log_len);
 
+  // Default port number is 80
   int port = 80;
   if (port_string) {
     port = atoi(port_string);
