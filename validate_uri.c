@@ -19,7 +19,12 @@ static char *validate_uri(const char *uri)
     return NULL;
   }
 
-  char sanitized_uri[MAXLINE];
+  char *sanitized_uri = malloc(MAXLINE);
+  if (sanitized_uri == NULL) 
+  {
+    return NULL;
+  }  
+
   int i = 0;
   while (*uri && i < MAXLINE - 1)
   {
@@ -114,7 +119,7 @@ bool has_commands(const char *uri)
     return false;
   }
   strcpy(lowercase_uri, uri);
-  for (int i = 0; i < uri_length; i++)
+  for (int i = 0; i <= uri_length; i++)
   {
     lowercase_uri[i] = tolower(lowercase_uri[i]);
   }
@@ -133,9 +138,10 @@ bool has_commands(const char *uri)
   return false;
 }
 
-void sanitize_uri(const char *uri)
+char *sanitize_uri(const char *uri)
 {
   char *sanitized_uri = validate_uri(uri);
+  printf("Sanitized URI: %s \n", sanitized_uri);
   if (sanitized_uri == NULL)
   {
     printf("Error: Invalid URI.\n");
@@ -150,10 +156,17 @@ void sanitize_uri(const char *uri)
   {
     printf("Error: SQL injection detected in the URI.\n");
     return NULL;
+
   }
-  if (has_disallowed_commands(sanitized_uri))
+  if (has_commands(sanitized_uri))
   {
     printf("Error: Disallowed commands detected in the URI.\n");
     return NULL;
   }
+  if(!safe_path(sanitized_uri))
+  {
+    printf("Error: Unsafe path detected in the URI. \n");
+    return NULL;
+  }
+  return sanitized_uri;
 }
