@@ -183,6 +183,7 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
   // Sanitize uri for malformed addresses/malicious input
   char *cleaned_uri = sanitize_uri(uri);
   if (!cleaned_uri) return;
+  printf("%s \n", cleaned_uri);
   memcpy(uri, cleaned_uri, strlen(cleaned_uri) + 1);
   free(cleaned_uri);
   cleaned_uri = NULL;

@@ -135,9 +135,7 @@ while (*source) {
             // Check if the word is a SQL keyword
             for (int j = 0; j < sizeof(sql_keywords) / sizeof(sql_keywords[0]); j++) {
                 if (strcasecmp(word, sql_keywords[j]) == 0) {
-                    // Neutralize the SQL keyword by replacing it with an empty string
-                    word[0] = '\0';
-                    break;
+                  return 
                 }
             }
             continue; // Skip the increment below to avoid missing the next character
