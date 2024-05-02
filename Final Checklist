@@ -7,25 +7,25 @@
 [/] Ignored
 
 ## General
-[~] Accept requests
-[~] Log each request to a file
-[~] Return result to browser
-[~] Errors handled gracefully. Ideally proxy doesn't terminate
+[X] Accept requests
+[X] Log each request to a file
+[X] Return result to browser
+[X] Errors handled gracefully. Ideally proxy doesn't terminate
 
 ## Hand in
 [ ] Extraneous Print Statements removed
-[ ] DEBUG off (?)
-[ ] Team member names in proxy.c
-[ ] Disable sanitizers in Makefile
-[ ] Zip file created.
+[X] DEBUG off (?)
+[X] Team member names in proxy.c
+[X] Disable sanitizers in Makefile
+[X] Zip file created.
 
 ## Uncategorized
-[~] [Debbie] Connection header sent
-[~] [Debbie] Proxy-Connection header sent
-[~] [Debbie] EOF sent to server connection when response finishes.
-[~] [Jai] Bad website filtering/blocklist
-[~] [UTSAV] Send HTML when user does a bad. (Blocklist, Bad URL)
-[?] Handle binary data // I thiiiiink this is okay. It works with images and pdfs, so it should be fine, but I don't do any explicit processing to handle binary data!
+[X] [Debbie] Connection header sent
+[X] [Debbie] Proxy-Connection header sent
+[/] [Debbie] EOF sent to server connection when response finishes.
+[X] [Jai] Bad website filtering/blocklist
+[X] [UTSAV] Send HTML when user does a bad. (Blocklist, Bad URL)
+[X] Handle binary data // I thiiiiink this is okay. It works with images and pdfs, so it should be fine, but I don't do any explicit processing to handle binary data!
 [X] [UTSAV] SIGPIPE ignored
 [X] HTTP/1.0 GET requests
 [X] [Debbie] Host header sent
