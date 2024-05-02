@@ -1,3 +1,4 @@
 warren.sewanee.edu/manacjs0
+info.cern.ch/*
 httpforever.com
 ocsp.pki.goog

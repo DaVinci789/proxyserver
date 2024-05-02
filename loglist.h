@@ -1,3 +1,10 @@
+/* loglist.h - Multithreaded capable logging system.
+ *             Decouples the act of sending a message and processing it.
+ * TEAM MEMBERS:
+ *      Jai Manacsa
+ *      Debbie Lim
+ *      Utsav Bhandari
+ */
 #ifndef LOGLIST_H
 #define LOGLIST_H
 #include <pthread.h>
@@ -123,10 +130,12 @@ int get_messages(struct LogListVisitor *visitor, int *len, char **message)
   }
 
   if (!visitor->current_list->dirty) {
-    *len = 0;
+    /**len = 0;
     *message = visitor->current_list->head.info;
     visitor->current_list = visitor->current_list->next;
-    return visitor->current_list != NULL;
+    return visitor->current_list != NULL;*/
+    visitor->current_list = visitor->current_list->next;
+    return get_messages(visitor, len, message);
   }
 
   pthread_mutex_lock(&visitor->current_list->lock);
@@ -138,9 +147,10 @@ int get_messages(struct LogListVisitor *visitor, int *len, char **message)
   if (visitor->current_node->used_chars == 0) {
     visitor->current_node = visitor->current_node->next;
     pthread_mutex_unlock(&visitor->current_list->lock);
-    *len = 0;
+    /**len = 0;
     *message = visitor->current_list->head.info;
-    return 1;
+    return 1;*/
+    return get_messages(visitor, len, message);
   }
 
   *len = visitor->current_node->used_chars;

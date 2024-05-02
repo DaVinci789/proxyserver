@@ -1,3 +1,10 @@
+/* validate_uri.c - Cleans uris from unsafe structures
+ * TEAM MEMBERS:
+ *      Debbie Lim
+ *      Jai Manacsa
+ *      Utsav Bhandari
+ */
+
 #include <stdlib.h> 
 #include <string.h> 
 #include <stdbool.h> 

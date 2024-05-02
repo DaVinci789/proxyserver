@@ -1,6 +1,17 @@
+/* multithread_proxy.c - Runner for the multithreaded/concurrent proxy
+ * TEAM MEMBERS:
+ *      Jai Manacsa
+ *      Debbie Lim
+ *      Utsav Bhandari
+ */
+
 #include "csapp.h"
 
 #include "requests.h"
+
+#ifndef RELEASE
+  #define LOGLIST_PRINTF
+#endif
 
 #define LOGLIST_IMPLEMENTATION
 #include "loglist.h"
@@ -9,7 +20,7 @@
 
 typedef struct thread_data {
   int connection_fd;
-  char client_ip[MAXLINE];
+  char client_ip[256];
   struct Blocklist list;
   struct LogList *logger;
 } thread_data;
@@ -29,7 +40,7 @@ void exit_signal(int signum)
 void *handle_client(void *vargp)
 {
   thread_data *thread_data = vargp;
-  handle_request(thread_data->connection_fd, thread_data->client_ip, (struct Blocklist) {0}, thread_data->logger);
+  handle_request(thread_data->connection_fd, thread_data->client_ip, thread_data->list, thread_data->logger); // @TODO Blocklist implimentation
   Close(thread_data->connection_fd);
   free(vargp);
   return NULL;
@@ -46,13 +57,7 @@ void *logging(void *vargp)
     char *message = NULL;
     int dirty = 0;
     while (get_messages(&visitor, &len, &message)) {
-      if (len == 0) continue; // @Hack @ThisIsALaterProblemDontFixThisForThisProjectButInTheFuture
-                              // The reason for this check is because a single iteration of advancing
-                              // the visitor to the next node is done every loop.
-                              // That is, all log message nodes may not have text, but we still need
-                              // run the while loop to figure that out.
       dirty = 1;
-      printf("%.*s", len, message);
       fprintf(data->log_file_fd, "%.*s", len, message);
     }
     if (dirty) fflush(data->log_file_fd);
@@ -87,17 +92,39 @@ int main(int argc, char **argv)
   pthread_create(&logging_id, NULL, &logging, (void *) log_thread_data);
   pthread_detach(logging_id);
 
+  int blockfile = open("blocklist.txt", O_RDONLY);
+  struct Blocklist list = {0};
+  if (blockfile) {
+    char *current = list.text;
+
+    rio_t rio = {0};
+    rio_readinitb(&rio, blockfile);
+
+    int len = 0;
+    while ((len = rio_readlineb(&rio, current, MAXLINE))) {
+      list.sites[list.num_blocked] = current;
+      list.sites_lens[list.num_blocked] = len - 1;
+      list.num_blocked += 1;
+      current += len;
+    }
+  }
+
   while (!exit_status) {
     struct sockaddr_in clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
     thread_data *thread_data = malloc(sizeof(*thread_data));
     thread_data->connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
+    memcpy(&thread_data->list, &list, sizeof(list));
     strcpy(thread_data->client_ip, inet_ntoa(clientaddr.sin_addr));
 
     if (exit_status) {
       free(thread_data);
       break;
     }
+
+    char message[MAXLINE] = {0};
+    int message_len = sprintf(message, "Accepted connection from %s\n", thread_data->client_ip);
+    log_message(head, message, message_len);
 
     *tail = init_loglist();
     thread_data->logger = *tail;
@@ -111,6 +138,7 @@ int main(int argc, char **argv)
   free(log_thread_data);
   close(listen_fd);
   fclose(logfile);
+  close(blockfile);
   destroy_loglist(head);
   pthread_kill(logging_id, SIGINT);
   return 0;

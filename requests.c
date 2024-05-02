@@ -1,3 +1,10 @@
+/* requests.c - Helper functions for making network calls.
+ * TEAM MEMBERS:
+ *      Jai Manacsa
+ *      Debbie Lim
+ *      Utsav Bhandari
+ */
+
 #include "requests.h"
 #include "validate_uri.h"
 #include "blocklist.h"
@@ -8,6 +15,8 @@
 #include <string.h>
 #include <stddef.h>
 
+// find `needle` memory in `haystack`
+// returns an address within `haystack` that points to the start of `needle`
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen)
 {
   char const *bf = haystack;
@@ -113,7 +122,10 @@ char *send_request(int port_number, char *host, char *message, int message_strle
   do {
     bytes = read(sockfd, response + received, total - received);
     if (bytes < 0) {
-      fprintf(stderr, "ERROR reading response from socket\n");
+      char errbuf[MAXLINE] = {0};
+      strerror_r(errno, errbuf, MAXLINE);
+      fprintf(stderr, "ERROR reading response from socket to %s: %s\n", host, errbuf);
+      free(response);
       return NULL;
     }
 
@@ -154,10 +166,10 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
   char *buf = malloc(MAXLINE);
   char *current = buf;
   int buf_size = MAXLINE;
-  rio_readinitb(&rio, connection_fd);
   ptrdiff_t http_content_size = 0;
   ptrdiff_t http_content_total = 0;
 
+  rio_readinitb(&rio, connection_fd);
   http_content_total = rio_readlineb(&rio, current, MAXLINE);
 
   // read the http request.
@@ -175,14 +187,25 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
   if (!host) host = "NOHOST";
 
   char *page = uri_parse.path;
-  if (!page) page = "/";
-  page += 1; // @Safety. This can mess up with the literal above.
+  if (page) page += 1;
+  if (!page || !(*page)) page = "/";
   char *port_string = uri_parse.port;
 
-  if (!check_block(blocklist, host, page)) {
-    char blockmessage[MAXLINE] = {0};
-    int len = sprintf(blockmessage, "Alert! Client attempted to access %s!\n", host);
+  if (!check_block(blocklist, uri)) {
+    char blockmessage[37192] = {0};
+    int len = sprintf(blockmessage, "Alert! Client attempted to access %s/%s\n", host, *page == '/' ? "" : page);
     log_message(logger, blockmessage, len);
+
+    char header[] = "HTTP/1.0 200 OK\r\nContent-Length: %d\r\nConnection: closed\r\n\r\n";
+    memcpy(blockmessage, header, sizeof(header));
+    len = sprintf(blockmessage, "<h1>HEY! GOING TO %s IS FORBODEN!!!!</h1><p>This incident will be ~reported.~<p>", uri);
+
+    char finalblockmessage[MAXLINE] = {0};
+    char *current = finalblockmessage;
+
+    int header_len = sprintf(current, header, len);
+    memcpy(current + header_len, blockmessage, len);
+    Write(connection_fd, finalblockmessage, header_len + len);
     return;
   }
 
@@ -200,14 +223,15 @@ void handle_request(int connection_fd, char *client_ip, struct Blocklist blockli
     }
 
     if (memmem_ci(current, http_content_size, STATIC("Connection: keep-alive"))) {
-      strcpy(current, "Connection: close\r\n");
-      http_content_size = sizeof("Connection: close\r\n") - 1;
+      char connection[] = "Connection: close\r\n";
+      strcpy(current, connection);
+      http_content_size = sizeof(connection) - 1;
     }
     #undef STATIC
 
     http_content_total += http_content_size;
     buf_size += MAXLINE;
-  } while (NULL == memmem("\r\n", sizeof("\r\n") - 1, current, http_content_size));
+  } while (!memmem("\r\n", sizeof("\r\n") - 1, current, http_content_size));
 
   char logged_message[32768] = {0};
   int log_len = sprintf(logged_message, "%s %s: %s %ld\n", client_ip , host, page, http_content_total);
