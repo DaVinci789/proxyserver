@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* validate_uri.c - Cleans uris from unsafe structures
  * TEAM MEMBERS:
  *      Debbie Lim
@@ -10,12 +9,6 @@
 #include <stdio.h> 
 #include <string.h> 
 #include <stdbool.h> 
-=======
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
->>>>>>> refs/remotes/origin/main
 #include <ctype.h>
 
 #define MAXLINE 8192

@@ -36,7 +36,6 @@ int main(int argc, char **argv)
   LOGLIST_SEQUENTIAL_FD = logfile;
   struct LogList *head = init_loglist();
 
-<<<<<<< HEAD
   int blockfile = open("blocklist.txt", O_RDONLY);
   struct Blocklist list = {0};
   if (blockfile) {
@@ -53,33 +52,17 @@ int main(int argc, char **argv)
       current += len;
     }
   }
-=======
-  // Initialize blocklist
-  struct Blocklist list = {0}; // @TODO. File parsing
-/*   list.sites[0] = "warren.sewanee.edu/";
-  list.sites_lens[0] = sizeof("warren.sewanee.edu/") - 1; */
-
-  // Hard coded blocked site?
-  list.sites[0] = "httpforever.com/";
-  list.sites_lens[0] = sizeof("httpforever.com/") - 1;
->>>>>>> refs/remotes/origin/main
 
   while (1) {
     struct sockaddr_in clientaddr = {0};
     socklen_t client_len = sizeof(clientaddr);
     int connection_fd = accept(listen_fd, (struct sockaddr *) &clientaddr, &client_len);
-<<<<<<< HEAD
     char *client_ip = inet_ntoa(clientaddr.sin_addr); // @ThreadSafety ?
 
     char message[MAXLINE] = {0};
     int message_len = sprintf(message, "Accepted connection from %s\n", client_ip);
     log_message(head, message, message_len);
 
-=======
-    
-    // Convert IP address (in network byte order) into readable string 
-    char *client_ip = inet_ntoa(clientaddr.sin_addr);
->>>>>>> refs/remotes/origin/main
     handle_request(connection_fd, client_ip, list, head);
     Close(connection_fd);
   }
