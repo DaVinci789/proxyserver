@@ -46,6 +46,7 @@ void *handle_client(void *vargp)
   return NULL;
 }
 
+// Function to log client requests, necessary to track activity of the proxy server
 void *logging(void *vargp)
 {
   log_thread_data *data = (log_thread_data *) vargp;
@@ -72,9 +73,14 @@ int main(int argc, char **argv)
     exit(1);
   }
 
+  // Initialize signal handler
   struct sigaction handler = {0};
   handler.sa_handler = exit_signal;
+
+  // Register SIGINT signal handler
   sigaction(SIGINT, &handler, NULL);
+
+  // Ignore SIGPIPE signal
   sigaction(SIGPIPE, &(struct sigaction){.sa_handler = SIG_IGN}, NULL);
 
   int listen_fd  = Open_listenfd(argv[1]);
@@ -88,6 +94,8 @@ int main(int argc, char **argv)
   log_thread_data->log_file_fd = logfile;
   log_thread_data->head = head;
 
+  // Asynchronously run logging in a separate thread, allows main operaton to continue 
+  // Without waiting for logging to complete
   pthread_t logging_id = {0};
   pthread_create(&logging_id, NULL, &logging, (void *) log_thread_data);
   pthread_detach(logging_id);
@@ -130,6 +138,7 @@ int main(int argc, char **argv)
     thread_data->logger = *tail;
     tail = &((*tail)->next); // @Style. Don't do this.
 
+    // Separate thread to handle client
     pthread_t thread_id = {0};
     pthread_create(&thread_id, NULL, &handle_client, (void *) thread_data);
     pthread_detach(thread_id);
