@@ -4,7 +4,7 @@
 # rule). You instructor will type "make" on your specific Makefile to
 # build your proxy from sources.
 
-RELEASE := 0
+RELEASE := 1
 
 CC = gcc
 CFLAGS = -g -Wall -Wextra -pedantic -fsanitize=address -fsanitize=undefined #-fsanitize=thread
