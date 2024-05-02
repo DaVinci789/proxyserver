@@ -13,14 +13,9 @@
 #define MAXLINE 8192
 #define pvar(s) printf(#s": %s\n", s)
 
-<<<<<<< HEAD
 static void *memmem(void *haystack, size_t haystacklen, void *needle, size_t needlelen);
 
 int check_block(struct Blocklist list, char *uri)
-=======
-// Check if uri is on the blocklist
-int check_block(struct Blocklist list, char *host, char *page)
->>>>>>> refs/remotes/origin/main
 {
   for (int i = 0; i < list.num_blocked; i++) {
     #define STATIC(s) s, sizeof(s) - 1
